@@ -24,7 +24,8 @@ const AnalysisState = {
 // =============================================================
 
 const ANALYZE_ENDPOINT = "/api/analyze";
-const NEWS_ENDPOINT    = "/api/news";
+// NOTE: NEWS_ENDPOINT is declared in news.js as "/api/news"
+// Do not redeclare it here — that causes a JS crash.
 
 // =============================================================
 // LOADING STEP ANIMATOR
