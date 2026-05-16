@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>REAMAL Trade — AI Forex Analysis</title>
+  <meta name="description" content="AI-powered EUR/USD forex analysis. Upload your chart, get real-time trade signals powered by Claude AI." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <!-- ============================================================
+       HEADER
+  ============================================================ -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-icon">📈</span>
+        <div>
+          <span class="logo-name">REAMAL Trade</span>
+          <span class="logo-tag">EUR/USD AI Analyst</span>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="market-badge" id="marketStatus">
+          <span class="pulse"></span>
+          <span id="marketStatusText">Checking market...</span>
+        </div>
+        <div class="time-display" id="currentTime">--:--:-- UTC</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============================================================
+       SENTIMENT BANNER
+  ============================================================ -->
+  <div class="sentiment-banner" id="sentimentBanner">
+    <div class="sentiment-inner">
+      <span class="sentiment-label">Live EUR/USD Sentiment:</span>
+      <span class="sentiment-value" id="sentimentValue">Loading news...</span>
+      <div class="sentiment-bar">
+        <div class="sentiment-bull" id="sentimentBull" style="width:0%"></div>
+        <div class="sentiment-bear" id="sentimentBear" style="width:0%"></div>
+      </div>
+      <span class="sentiment-pct" id="sentimentPct"></span>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       MAIN LAYOUT
+  ============================================================ -->
+  <main class="main">
+    <div class="grid">
+
+      <!-- LEFT COLUMN -->
+      <div class="col-left">
+
+        <!-- RISK MANAGER -->
+        <section class="card" id="riskCard">
+          <div class="card-header">
+            <span class="card-icon">⚙️</span>
+            <h2 class="card-title">Risk Manager</h2>
+          </div>
+          <div class="risk-grid">
+            <div class="risk-field">
+              <label for="accountBalance">Account Balance (USD)</label>
+              <div class="input-wrap">
+                <span class="input-prefix">$</span>
+                <input type="number" id="accountBalance" value="100" min="1" step="1" />
+              </div>
+            </div>
+            <div class="risk-field">
+              <label for="riskPercent">Risk Per Trade (%)</label>
+              <div class="input-wrap">
+                <input type="number" id="riskPercent" value="2" min="0.1" max="10" step="0.1" />
+                <span class="input-suffix">%</span>
+              </div>
+            </div>
+          </div>
+          <div class="risk-summary" id="riskSummary">
+            <div class="risk-stat">
+              <span class="risk-stat-label">Max Loss/Trade</span>
+              <span class="risk-stat-value danger" id="maxLoss">$2.00</span>
+            </div>
+            <div class="risk-stat">
+              <span class="risk-stat-label">Safe Lot Size</span>
+              <span class="risk-stat-value" id="safeLot">0.01 micro</span>
+            </div>
+            <div class="risk-stat">
+              <span class="risk-stat-label">Daily Target (2%)</span>
+              <span class="risk-stat-value success" id="dailyTarget">$2.00</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- CHART UPLOADER -->
+        <section class="card" id="uploaderCard">
+          <div class="card-header">
+            <span class="card-icon">📸</span>
+            <h2 class="card-title">Upload Chart</h2>
+            <span class="card-sub">TradingView · Exness · MT5 · MT4</span>
+          </div>
+
+          <div class="upload-area" id="uploadArea">
+            <div class="upload-content" id="uploadContent">
+              <div class="upload-icon">📊</div>
+              <p class="upload-title">Drop chart here or click to upload</p>
+              <p class="upload-hint">Also supports Ctrl+V to paste screenshot</p>
+              <p class="upload-hint">PNG, JPG, WEBP · Max 10MB · 15M timeframe recommended</p>
+              <button class="btn btn-outline" id="uploadBtn" type="button">Choose File</button>
+            </div>
+            <img id="chartPreview" class="chart-preview hidden" alt="Chart preview" />
+            <input type="file" id="fileInput" accept="image/*" class="hidden" />
+          </div>
+
+          <div class="upload-actions" id="uploadActions" style="display:none">
+            <button class="btn btn-ghost btn-sm" id="clearChart" type="button">✕ Clear</button>
+            <span class="upload-filename" id="uploadFilename"></span>
+          </div>
+
+          <button class="btn btn-primary btn-lg" id="analyzeBtn" type="button" disabled>
+            <span id="analyzeBtnText">🤖 Analyze Chart</span>
+          </button>
+          <p class="analyze-note">AI reads chart + live news to generate your signal</p>
+        </section>
+
+      </div>
+
+      <!-- CENTER COLUMN -->
+      <div class="col-center">
+
+        <!-- ANALYSIS RESULT -->
+        <section class="card card-analysis" id="analysisCard">
+          <div class="card-header">
+            <span class="card-icon">🎯</span>
+            <h2 class="card-title">Trade Signal</h2>
+            <span class="analysis-timestamp hidden" id="analysisTimestamp"></span>
+          </div>
+
+          <!-- Empty state -->
+          <div class="analysis-empty" id="analysisEmpty">
+            <div class="empty-icon">🔍</div>
+            <p class="empty-title">No analysis yet</p>
+            <p class="empty-hint">Upload a 15M EUR/USD chart and click Analyze to get your trade signal</p>
+            <div class="empty-steps">
+              <div class="empty-step"><span>1</span> Check news sentiment above</div>
+              <div class="empty-step"><span>2</span> Set your account balance</div>
+              <div class="empty-step"><span>3</span> Upload your chart screenshot</div>
+              <div class="empty-step"><span>4</span> Click Analyze Chart</div>
+            </div>
+          </div>
+
+          <!-- Loading state -->
+          <div class="analysis-loading hidden" id="analysisLoading">
+            <div class="loading-spinner"></div>
+            <p class="loading-title">Analyzing your chart...</p>
+            <div class="loading-steps" id="loadingSteps">
+              <div class="loading-step active" id="step1">📰 Fetching live news</div>
+              <div class="loading-step" id="step2">🧠 Running AI analysis</div>
+              <div class="loading-step" id="step3">📊 Applying forex strategies</div>
+              <div class="loading-step" id="step4">🎯 Generating trade signal</div>
+            </div>
+          </div>
+
+          <!-- Signal summary cards -->
+          <div class="signal-summary hidden" id="signalSummary">
+            <div class="signal-card" id="signalDirection">
+              <span class="signal-label">Direction</span>
+              <span class="signal-value" id="signalDirectionVal">—</span>
+            </div>
+            <div class="signal-card">
+              <span class="signal-label">Confidence</span>
+              <span class="signal-value" id="signalConfidence">—</span>
+            </div>
+            <div class="signal-card">
+              <span class="signal-label">Confluence</span>
+              <span class="signal-value" id="signalConfluence">—</span>
+            </div>
+            <div class="signal-card">
+              <span class="signal-label">Risk/Reward</span>
+              <span class="signal-value" id="signalRR">—</span>
+            </div>
+          </div>
+
+          <!-- Trade levels -->
+          <div class="trade-levels hidden" id="tradeLevels">
+            <div class="level-row entry">
+              <span class="level-label">📍 Entry</span>
+              <span class="level-value" id="levelEntry">—</span>
+            </div>
+            <div class="level-row tp">
+              <span class="level-label">✅ Take Profit 1</span>
+              <span class="level-value" id="levelTP1">—</span>
+            </div>
+            <div class="level-row tp">
+              <span class="level-label">✅ Take Profit 2</span>
+              <span class="level-value" id="levelTP2">—</span>
+            </div>
+            <div class="level-row sl">
+              <span class="level-label">🛑 Stop Loss</span>
+              <span class="level-value" id="levelSL">—</span>
+            </div>
+          </div>
+
+          <!-- Full AI analysis text -->
+          <div class="analysis-full hidden" id="analysisFull">
+            <div class="analysis-toggle" id="analysisToggle">
+              <span>📄 Full Analysis</span>
+              <span class="toggle-arrow">▼</span>
+            </div>
+            <div class="analysis-body" id="analysisBody"></div>
+          </div>
+
+          <!-- Log to journal button -->
+          <button class="btn btn-success btn-lg hidden" id="logTradeBtn" type="button">
+            📓 Log This Trade to Journal
+          </button>
+
+        </section>
+
+      </div>
+
+      <!-- RIGHT COLUMN -->
+      <div class="col-right">
+
+        <!-- LIVE NEWS -->
+        <section class="card card-news" id="newsCard">
+          <div class="card-header">
+            <span class="card-icon">📰</span>
+            <h2 class="card-title">Live EUR/USD News</h2>
+            <button class="btn btn-ghost btn-sm" id="refreshNews" type="button">↻ Refresh</button>
+          </div>
+          <div class="news-meta" id="newsMeta"></div>
+          <div class="news-list" id="newsList">
+            <div class="news-loading">
+              <div class="loading-spinner sm"></div>
+              <span>Fetching live news...</span>
+            </div>
+          </div>
+        </section>
+
+      </div>
+
+    </div>
+
+    <!-- TRADE JOURNAL — Full width -->
+    <section class="card card-journal" id="journalCard">
+      <div class="card-header">
+        <span class="card-icon">📓</span>
+        <h2 class="card-title">Trade Journal</h2>
+        <div class="journal-header-right">
+          <span class="journal-stats" id="journalStats"></span>
+          <button class="btn btn-ghost btn-sm" id="exportJournal" type="button">⬇ Export CSV</button>
+          <button class="btn btn-ghost btn-sm danger" id="clearJournal" type="button">🗑 Clear All</button>
+        </div>
+      </div>
+
+      <!-- Journal entry form -->
+      <div class="journal-form" id="journalForm">
+        <div class="form-row">
+          <div class="form-field">
+            <label>Direction</label>
+            <select id="jDirection">
+              <option value="BUY">BUY</option>
+              <option value="SELL">SELL</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label>Entry Price</label>
+            <input type="number" id="jEntry" step="0.00001" placeholder="1.08500" />
+          </div>
+          <div class="form-field">
+            <label>Take Profit</label>
+            <input type="number" id="jTP" step="0.00001" placeholder="1.08700" />
+          </div>
+          <div class="form-field">
+            <label>Stop Loss</label>
+            <input type="number" id="jSL" step="0.00001" placeholder="1.08300" />
+          </div>
+          <div class="form-field">
+            <label>Lot Size</label>
+            <input type="number" id="jLot" step="0.01" placeholder="0.01" />
+          </div>
+          <div class="form-field">
+            <label>Result</label>
+            <select id="jResult">
+              <option value="OPEN">Open</option>
+              <option value="WIN">Win (TP Hit)</option>
+              <option value="LOSS">Loss (SL Hit)</option>
+              <option value="BE">Breakeven</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label>P&L (USD)</label>
+            <input type="number" id="jPnL" step="0.01" placeholder="0.00" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-field wide">
+            <label>Notes</label>
+            <input type="text" id="jNotes" placeholder="Trade reasoning, lessons learned..." />
+          </div>
+          <button class="btn btn-primary" id="addTradeBtn" type="button">+ Add Trade</button>
+        </div>
+      </div>
+
+      <!-- Journal table -->
+      <div class="journal-table-wrap">
+        <table class="journal-table" id="journalTable">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Date</th>
+              <th>Dir</th>
+              <th>Entry</th>
+              <th>TP</th>
+              <th>SL</th>
+              <th>Lot</th>
+              <th>Result</th>
+              <th>P&L</th>
+              <th>Notes</th>
+              <th>Del</th>
+            </tr>
+          </thead>
+          <tbody id="journalBody">
+            <tr class="journal-empty-row">
+              <td colspan="11">No trades logged yet. Add your first trade above!</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Journal summary -->
+      <div class="journal-summary" id="journalSummary" style="display:none">
+        <div class="summary-stat">
+          <span class="summary-label">Total Trades</span>
+          <span class="summary-value" id="sumTotal">0</span>
+        </div>
+        <div class="summary-stat">
+          <span class="summary-label">Wins</span>
+          <span class="summary-value success" id="sumWins">0</span>
+        </div>
+        <div class="summary-stat">
+          <span class="summary-label">Losses</span>
+          <span class="summary-value danger" id="sumLosses">0</span>
+        </div>
+        <div class="summary-stat">
+          <span class="summary-label">Win Rate</span>
+          <span class="summary-value" id="sumWinRate">0%</span>
+        </div>
+        <div class="summary-stat">
+          <span class="summary-label">Total P&L</span>
+          <span class="summary-value" id="sumPnL">$0.00</span>
+        </div>
+        <div class="summary-stat">
+          <span class="summary-label">Best Trade</span>
+          <span class="summary-value success" id="sumBest">$0.00</span>
+        </div>
+        <div class="summary-stat">
+          <span class="summary-label">Worst Trade</span>
+          <span class="summary-value danger" id="sumWorst">$0.00</span>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ============================================================
+       FOOTER
+  ============================================================ -->
+  <footer class="footer">
+    <p>
+      <strong>⚠️ Risk Disclaimer:</strong>
+      REAMAL Trade is an educational and analytical tool only. It does not guarantee profits.
+      Forex trading involves significant risk of loss. Always use a demo account first and never
+      risk money you cannot afford to lose.
+    </p>
+    <p class="footer-credit">REAMAL Trade · Powered by Claude AI · Built for EUR/USD 15M Analysis</p>
+  </footer>
+
+  <!-- ============================================================
+       TOAST NOTIFICATION
+  ============================================================ -->
+  <div class="toast hidden" id="toast">
+    <span id="toastMsg"></span>
+  </div>
+
+  <!-- ============================================================
+       SCRIPTS
+  ============================================================ -->
+  <script src="js/journal.js"></script>
+  <script src="js/news.js"></script>
+  <script src="js/uploader.js"></script>
+  <script src="js/analysis.js"></script>
+  <script src="js/app.js"></script>
+
+</body>
+</html>
