@@ -1,10 +1,10 @@
-# 📈 REAMAL Trade
+# REAMAL Trade
 
 > AI-powered EUR/USD Forex Analysis Website — Upload your chart, get real-time AI analysis, live news, and trade signals. Hosted 100% free on Netlify.
 
 ---
 
-## 🌟 Features
+## Features
 
 - 📸 **Chart Image Analysis** — Upload or paste screenshots from TradingView, Exness, MT5, and more
 - 📰 **Live Forex News** — Auto-fetches EUR/USD news from FXStreet, DailyFX, and Reuters
@@ -16,7 +16,7 @@
 
 ---
 
-## 🗂️ Project Structure
+## Project Structure
 
 ```
 reamal-trade/
@@ -51,7 +51,7 @@ reamal-trade/
 
 ---
 
-## 🚀 Setup Instructions
+## Setup Instructions
 
 ### 1. Clone or Download the Repository
 ```bash
@@ -79,7 +79,7 @@ Visit: [http://localhost:8888](http://localhost:8888)
 
 ---
 
-## 🌍 Deploy to Netlify (Free)
+## Deploy to Netlify (Free)
 
 ### Option A — Deploy via GitHub (Recommended)
 1. Push your project to a GitHub repository
@@ -97,7 +97,7 @@ Visit: [http://localhost:8888](http://localhost:8888)
 
 ---
 
-## 📋 How to Use
+## How to Use
 
 1. **Open your REAMAL Trade website**
 2. **Check the News Panel** — review the latest EUR/USD news and market sentiment
@@ -110,7 +110,7 @@ Visit: [http://localhost:8888](http://localhost:8888)
 
 ---
 
-## ⚠️ Risk Disclaimer
+## Risk Disclaimer
 
 > REAMAL Trade is an **educational and analytical tool only**. It does **not** guarantee profits. Forex trading involves significant risk of loss. Always use a **demo account** first, never risk money you cannot afford to lose, and apply proper risk management (max 1–2% of account per trade). Past performance does not guarantee future results.
 
@@ -125,12 +125,12 @@ Visit: [http://localhost:8888](http://localhost:8888)
 
 ---
 
-## 👤 Author
+## Author
 
-**REAMAL Trade** — Built for EUR/USD 15-minute forex analysis
+**REAMAL Trade (Reagan & Maloyo) ** — Built for EUR/USD 15-minute forex analysis
 
 ---
 
-## 📜 License
+## License
 
 MIT License — Free to use, modify, and distribute.
