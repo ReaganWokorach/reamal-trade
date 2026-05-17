@@ -6,13 +6,13 @@
 
 ## Features
 
-- 📸 **Chart Image Analysis** — Upload or paste screenshots from TradingView, Exness, MT5, and more
-- 📰 **Live Forex News** — Auto-fetches EUR/USD news from FXStreet, DailyFX, and Reuters
-- 🤖 **AI Trade Signals** — Entry, Take Profit, Stop Loss, and Risk/Reward powered by Claude AI
-- 📊 **Multi-Strategy Algorithms** — EMA crossover, RSI, Support/Resistance, Candlestick patterns
-- 📓 **Trade Journal** — Log, track, and review every trade you make
-- ⚠️  **Risk Manager** — Auto-calculates safe lot sizes based on your account balance
-- 🌐 **15-Minute Timeframe Optimized** — Built specifically for short-term EUR/USD trading
+- **Chart Image Analysis** — Upload or paste screenshots from TradingView, Exness, MT5, and more
+- **Live Forex News** — Auto-fetches EUR/USD news from FXStreet, DailyFX, and Reuters
+- **AI Trade Signals** — Entry, Take Profit, Stop Loss, and Risk/Reward powered by Claude AI
+- **Multi-Strategy Algorithms** — EMA crossover, RSI, Support/Resistance, Candlestick patterns
+- **Trade Journal** — Log, track, and review every trade you make
+- **Risk Manager** — Auto-calculates safe lot sizes based on your account balance
+- **15-Minute Timeframe Optimized** — Built specifically for short-term EUR/USD trading
 
 ---
 
