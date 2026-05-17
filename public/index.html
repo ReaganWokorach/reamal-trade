@@ -205,7 +205,7 @@ a{color:var(--green);text-decoration:none}
 <header class="header">
   <div class="header-inner">
     <div class="logo">
-      <span class="logo-icon">📈</span>
+      <span class="logo-icon"></span>
       <div><span class="logo-name">REAMAL Trade</span><span class="logo-tag">EUR/USD AI Analyst</span></div>
     </div>
     <div class="header-right">
@@ -243,7 +243,7 @@ a{color:var(--green);text-decoration:none}
         <div class="card-header"><span class="card-icon">📸</span><h2 class="card-title">Upload Chart</h2><span class="card-sub">TradingView · Exness · MT5 · MT4</span></div>
         <div class="upload-area" id="uploadArea">
           <div class="upload-content" id="uploadContent">
-            <div class="upload-icon">📊</div>
+            <div class="upload-icon"></div>
             <p class="upload-title">Drop chart here or click to upload</p>
             <p class="upload-hint">Also supports Ctrl+V to paste screenshot</p>
             <p class="upload-hint">PNG, JPG, WEBP · Max 10MB</p>
@@ -263,9 +263,9 @@ a{color:var(--green);text-decoration:none}
 
     <div class="col-center">
       <section class="card" style="min-height:300px">
-        <div class="card-header"><span class="card-icon">🎯</span><h2 class="card-title">Trade Signal</h2><span class="analysis-timestamp hidden" id="analysisTimestamp"></span></div>
+        <div class="card-header"><span class="card-icon"></span><h2 class="card-title">Trade Signal</h2><span class="analysis-timestamp hidden" id="analysisTimestamp"></span></div>
         <div class="analysis-empty" id="analysisEmpty">
-          <div class="empty-icon">🔍</div>
+          <div class="empty-icon"></div>
           <p class="empty-title">No analysis yet</p>
           <p class="empty-hint">Upload a 15M EUR/USD chart and click Analyze to get your trade signal</p>
           <div class="empty-steps">
@@ -279,10 +279,10 @@ a{color:var(--green);text-decoration:none}
           <div class="loading-spinner"></div>
           <p class="loading-title">Analyzing your chart...</p>
           <div class="loading-steps">
-            <div class="loading-step" id="step1">📰 Fetching live news</div>
-            <div class="loading-step" id="step2">🧠 Running AI analysis</div>
-            <div class="loading-step" id="step3">📊 Applying forex strategies</div>
-            <div class="loading-step" id="step4">🎯 Generating trade signal</div>
+            <div class="loading-step" id="step1"> Fetching live news</div>
+            <div class="loading-step" id="step2"> Running AI analysis</div>
+            <div class="loading-step" id="step3"> Applying forex strategies</div>
+            <div class="loading-step" id="step4"> Generating trade signal</div>
           </div>
         </div>
         <div class="signal-summary hidden" id="signalSummary">
@@ -292,10 +292,10 @@ a{color:var(--green);text-decoration:none}
           <div class="signal-card"><span class="signal-label">Risk/Reward</span><span class="signal-value" id="signalRR">—</span></div>
         </div>
         <div class="trade-levels hidden" id="tradeLevels">
-          <div class="level-row entry"><span class="level-label">📍 Entry</span><span class="level-value" id="levelEntry">—</span></div>
-          <div class="level-row tp"><span class="level-label">✅ Take Profit 1</span><span class="level-value" id="levelTP1">—</span></div>
-          <div class="level-row tp"><span class="level-label">✅ Take Profit 2</span><span class="level-value" id="levelTP2">—</span></div>
-          <div class="level-row sl"><span class="level-label">🛑 Stop Loss</span><span class="level-value" id="levelSL">—</span></div>
+          <div class="level-row entry"><span class="level-label"> Entry</span><span class="level-value" id="levelEntry">—</span></div>
+          <div class="level-row tp"><span class="level-label"> Take Profit 1</span><span class="level-value" id="levelTP1">—</span></div>
+          <div class="level-row tp"><span class="level-label"> Take Profit 2</span><span class="level-value" id="levelTP2">—</span></div>
+          <div class="level-row sl"><span class="level-label"> Stop Loss</span><span class="level-value" id="levelSL">—</span></div>
         </div>
         <div class="analysis-full hidden" id="analysisFull">
           <div class="analysis-toggle" id="analysisToggle"><span>📄 Full Analysis</span><span class="toggle-arrow">▼</span></div>
@@ -307,7 +307,7 @@ a{color:var(--green);text-decoration:none}
 
     <div class="col-right">
       <section class="card card-news">
-        <div class="card-header"><span class="card-icon">📰</span><h2 class="card-title">Live EUR/USD News</h2><button class="btn btn-ghost btn-sm" id="refreshNews" type="button">↻ Refresh</button></div>
+        <div class="card-header"><span class="card-icon"></span><h2 class="card-title">Live EUR/USD News</h2><button class="btn btn-ghost btn-sm" id="refreshNews" type="button">↻ Refresh</button></div>
         <div class="news-meta" id="newsMeta"></div>
         <div class="news-list" id="newsList"><div class="news-loading"><div class="loading-spinner sm"></div><span>Fetching live news...</span></div></div>
       </section>
@@ -316,7 +316,7 @@ a{color:var(--green);text-decoration:none}
 
   <section class="card card-journal" id="journalCard">
     <div class="card-header">
-      <span class="card-icon">📓</span><h2 class="card-title">Trade Journal</h2>
+      <span class="card-icon"></span><h2 class="card-title">Trade Journal</h2>
       <div class="journal-header-right">
         <span class="journal-stats" id="journalStats"></span>
         <button class="btn btn-ghost btn-sm" id="exportJournal" type="button">⬇ Export CSV</button>
@@ -357,7 +357,7 @@ a{color:var(--green);text-decoration:none}
 </main>
 
 <footer class="footer">
-  <p><strong>⚠️ Risk Disclaimer:</strong> REAMAL Trade is an educational tool only. Forex trading involves significant risk. Always use a demo account first.</p>
+  <p><strong> Risk Disclaimer:</strong> REAMAL Trade is an educational tool only. Forex trading involves significant risk. Always use a demo account first.</p>
   <p class="footer-credit">REAMAL Trade · Powered by Claude AI · EUR/USD 15M Analysis</p>
 </footer>
 
@@ -434,25 +434,57 @@ function loadImage(file, name) {
   if (!file) return;
   var allowed = ['image/png','image/jpeg','image/jpg','image/webp','image/gif'];
   if (!allowed.includes(file.type)) { showToast('❌ Use PNG, JPG or WEBP', 'error'); return; }
-  if (file.size > 10*1024*1024) { showToast('❌ Image too large (max 10MB)', 'error'); return; }
+  showToast('⏳ Processing chart...', 'info', 2000);
   var reader = new FileReader();
   reader.onload = function(e) {
-    imgBase64 = e.target.result.split(',')[1];
-    imgType   = file.type;
-    var prev  = document.getElementById('chartPreview');
-    var cont  = document.getElementById('uploadContent');
-    var area  = document.getElementById('uploadArea');
-    var acts  = document.getElementById('uploadActions');
-    var fname = document.getElementById('uploadFilename');
-    var btn   = document.getElementById('analyzeBtn');
-    prev.src = e.target.result;
-    prev.classList.remove('hidden');
-    cont.classList.add('hidden');
-    area.classList.add('has-image');
-    acts.classList.remove('hidden');
-    if (fname) fname.textContent = name || file.name || 'chart.png';
-    if (btn)   btn.disabled = false;
-    showToast('✅ Chart loaded. Click Analyze Chart!', 'success');
+    var originalDataUrl = e.target.result;
+    var img = new Image();
+    img.onload = function() {
+      var MAX_W = 1280, MAX_H = 800;
+      var w = img.width, h = img.height;
+      if (w > MAX_W || h > MAX_H) {
+        var ratio = Math.min(MAX_W / w, MAX_H / h);
+        w = Math.round(w * ratio);
+        h = Math.round(h * ratio);
+      }
+      var canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      var ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, w, h);
+      ctx.drawImage(img, 0, 0, w, h);
+      var compressed = canvas.toDataURL('image/jpeg', 0.90);
+      imgBase64 = compressed.split(',')[1];
+      imgType   = 'image/jpeg';
+      var prev  = document.getElementById('chartPreview');
+      var cont  = document.getElementById('uploadContent');
+      var area  = document.getElementById('uploadArea');
+      var acts  = document.getElementById('uploadActions');
+      var fname = document.getElementById('uploadFilename');
+      var btn   = document.getElementById('analyzeBtn');
+      prev.src = compressed;
+      prev.classList.remove('hidden');
+      cont.classList.add('hidden');
+      area.classList.add('has-image');
+      acts.classList.remove('hidden');
+      if (fname) fname.textContent = (name || file.name || 'chart.png') + ' (' + w + 'x' + h + ')';
+      if (btn)   btn.disabled = false;
+      showToast('✅ Chart ready (' + w + 'x' + h + 'px). Click Analyze Chart!', 'success');
+    };
+    img.onerror = function() {
+      imgBase64 = originalDataUrl.split(',')[1];
+      imgType   = 'image/jpeg';
+      var prev = document.getElementById('chartPreview');
+      var btn  = document.getElementById('analyzeBtn');
+      prev.src = originalDataUrl;
+      prev.classList.remove('hidden');
+      document.getElementById('uploadContent').classList.add('hidden');
+      document.getElementById('uploadArea').classList.add('has-image');
+      document.getElementById('uploadActions').classList.remove('hidden');
+      if (btn) btn.disabled = false;
+      showToast('✅ Chart loaded. Click Analyze Chart!', 'success');
+    };
+    img.src = originalDataUrl;
   };
   reader.readAsDataURL(file);
 }
@@ -838,7 +870,7 @@ document.addEventListener('DOMContentLoaded', function() {
     var js=document.getElementById('jSL');    if(js) js.value=ep(lastSignal.sl);
     var jn=document.getElementById('jNotes'); if(jn) jn.value='AI Signal — Confluence: '+lastSignal.confluenceScore+' | Confidence: '+lastSignal.confidence;
     document.getElementById('journalCard').scrollIntoView({behavior:'smooth',block:'start'});
-    showToast('📓 Journal pre-filled. Review and save.','success');
+    showToast('Journal pre-filled. Review and save.','success');
   });
 
   // Journal buttons
@@ -860,7 +892,7 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   showToast('REAMAL Trade ready. Upload a chart to begin!','info',4000);
-  console.log('✅ REAMAL Trade — All systems ready');
+  console.log('REAMAL Trade — All systems ready');
 });
 </script>
 </body>
