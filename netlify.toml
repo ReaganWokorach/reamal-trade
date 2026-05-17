@@ -2,9 +2,6 @@
   publish = "public"
   functions = "netlify/functions"
 
-[functions]
-  node_bundler = "esbuild"
-
 [[redirects]]
   from = "/api/analyze"
   to = "/.netlify/functions/analyze"
@@ -25,7 +22,3 @@
   [headers.values]
     X-Frame-Options = "DENY"
     X-Content-Type-Options = "nosniff"
-
-[context.production.environment]
-  CLAUDE_MODEL = "claude-sonnet-4-20250514"
-  MAX_TOKENS = "1500"
