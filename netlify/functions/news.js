@@ -1,315 +1,185 @@
 // =============================================================
-// REAMAL Trade — Live Forex News Function
-// File: netlify/functions/news.js
-// =============================================================
-// This function fetches live EUR/USD news from multiple
-// free RSS feeds: FXStreet, DailyFX, ForexLive, Reuters,
-// and Investing.com — no paid API keys needed.
-// Results are merged, deduplicated, sorted by time,
-// and formatted for both display and AI analysis.
+// REAMAL Trade — Live News Function
+// Uses built-in fetch only — zero npm packages required
 // =============================================================
 
-import Parser from "rss-parser";
+exports.handler = async function(event) {
 
-const parser = new Parser({
-  timeout: 8000,
-  headers: {
-    "User-Agent": "REAMAL-Trade-Bot/1.0 (Forex News Aggregator)",
-    Accept: "application/rss+xml, application/xml, text/xml",
-  },
-});
+  if (event.httpMethod === "OPTIONS") {
+    return { statusCode: 200, headers: cors(), body: "" };
+  }
 
-// =============================================================
-// NEWS SOURCES — All free RSS feeds, no API keys needed
-// =============================================================
+  // RSS feed sources — all free, no API keys needed
+  var sources = [
+    { name: "ForexLive",     url: "https://www.forexlive.com/feed/news" },
+    { name: "FXStreet",      url: "https://www.fxstreet.com/rss/news" },
+    { name: "Investing.com", url: "https://www.investing.com/rss/news_25.rss" },
+    { name: "DailyFX",       url: "https://www.dailyfx.com/feeds/all" }
+  ];
 
-const NEWS_SOURCES = [
-  {
-    name: "FXStreet",
-    url: "https://www.fxstreet.com/rss/news",
-    category: "Analysis",
-    reliability: "High",
-  },
-  {
-    name: "DailyFX",
-    url: "https://www.dailyfx.com/feeds/all",
-    category: "Analysis",
-    reliability: "High",
-  },
-  {
-    name: "ForexLive",
-    url: "https://www.forexlive.com/feed/news",
-    category: "Live News",
-    reliability: "High",
-  },
-  {
-    name: "Investing.com Forex",
-    url: "https://www.investing.com/rss/news_25.rss",
-    category: "Market News",
-    reliability: "High",
-  },
-  {
-    name: "Reuters Forex",
-    url: "https://feeds.reuters.com/reuters/businessNews",
-    category: "Business News",
-    reliability: "High",
-  },
-];
+  // Keywords to filter EUR/USD relevant news
+  var keywords = ["eur","usd","dollar","euro","ecb","fed","federal reserve",
+    "european central bank","interest rate","inflation","cpi","gdp","nfp",
+    "non-farm","unemployment","fomc","powell","lagarde","forex","eurusd",
+    "eur/usd","hawkish","dovish","rate hike","rate cut","monetary policy"];
 
-// =============================================================
-// EUR/USD KEYWORDS — Used to filter relevant news only
-// =============================================================
+  var bullishWords = ["euro rises","euro gains","eur higher","dollar weakens",
+    "usd falls","dollar drops","fed dovish","rate cut expected","weaker dollar"];
+  var bearishWords = ["euro falls","euro drops","eur lower","dollar rises",
+    "usd gains","dollar strengthens","fed hawkish","rate hike expected","stronger dollar"];
 
-const EURUSD_KEYWORDS = [
-  "EUR/USD", "EURUSD", "euro", "EUR", "dollar", "USD",
-  "ECB", "European Central Bank", "Federal Reserve", "Fed",
-  "interest rate", "inflation", "CPI", "GDP", "NFP",
-  "non-farm payroll", "unemployment", "retail sales",
-  "PMI", "ISM", "FOMC", "lagarde", "powell",
-  "eurozone", "euro zone", "europe", "forex", "fx",
-  "currency", "monetary policy", "rate hike", "rate cut",
-  "quantitative", "tapering", "hawkish", "dovish",
-];
+  // Fetch all sources in parallel
+  var results = await Promise.allSettled(
+    sources.map(function(s) { return fetchRSS(s); })
+  );
 
-// =============================================================
-// SENTIMENT KEYWORDS — Used to determine bullish/bearish bias
-// =============================================================
+  var allArticles = [];
+  results.forEach(function(r) {
+    if (r.status === "fulfilled") allArticles = allArticles.concat(r.value);
+  });
 
-const BULLISH_EUR_KEYWORDS = [
-  "euro rises", "euro gains", "euro strengthens", "EUR higher",
-  "ECB hawkish", "rate hike", "euro rally", "EUR/USD up",
-  "dollar weakens", "USD falls", "dollar drops", "Fed dovish",
-  "rate cut expected", "weaker dollar", "dollar selling",
-];
+  // Filter relevant, deduplicate, sort newest first
+  var seen = {};
+  var filtered = allArticles
+    .filter(function(a) { return isRelevant(a.title + " " + a.summary, keywords); })
+    .filter(function(a) {
+      var key = a.title.slice(0, 50).toLowerCase();
+      if (seen[key]) return false;
+      seen[key] = true;
+      return true;
+    })
+    .sort(function(a, b) { return new Date(b.publishedAt) - new Date(a.publishedAt); });
 
-const BEARISH_EUR_KEYWORDS = [
-  "euro falls", "euro drops", "euro weakens", "EUR lower",
-  "ECB dovish", "rate cut", "euro declines", "EUR/USD down",
-  "dollar rises", "USD gains", "dollar strengthens", "Fed hawkish",
-  "rate hike expected", "stronger dollar", "dollar buying",
-];
+  // Tag sentiment
+  filtered.forEach(function(a) {
+    a.sentiment = getSentiment(a.title + " " + a.summary, bullishWords, bearishWords);
+  });
 
-// =============================================================
-// FETCH NEWS FROM A SINGLE SOURCE
-// =============================================================
+  // Overall sentiment
+  var bullCount = filtered.filter(function(a) { return a.sentiment === "Bullish EUR"; }).length;
+  var bearCount = filtered.filter(function(a) { return a.sentiment === "Bearish EUR"; }).length;
+  var total     = filtered.length || 1;
+  var bullPct   = Math.round((bullCount / total) * 100);
+  var bearPct   = Math.round((bearCount / total) * 100);
+  var overall   = bullCount > bearCount + 2 ? "Bullish EUR" : bearCount > bullCount + 2 ? "Bearish EUR" : "Neutral";
 
-async function fetchFromSource(source) {
+  var sentiment = { overall: overall, bullishPct: bullPct, bearishPct: bearPct, neutralPct: 100 - bullPct - bearPct };
+
+  // Format for AI
+  var top = filtered.slice(0, 8);
+  var aiContext = "OVERALL SENTIMENT: " + overall + " (" + bullPct + "% Bullish | " + bearPct + "% Bearish)\n\n"
+    + "LATEST EUR/USD NEWS:\n"
+    + top.map(function(a, i) {
+        return (i+1) + ". [" + a.source + "] [" + a.sentiment + "] " + a.title
+          + (a.summary ? "\n   " + a.summary.slice(0, 120) + "..." : "");
+      }).join("\n\n");
+
+  return {
+    statusCode: 200,
+    headers: cors(),
+    body: JSON.stringify({
+      success:   true,
+      articles:  filtered.slice(0, 20),
+      sentiment: sentiment,
+      aiContext: aiContext,
+      meta: {
+        total:            filtered.length,
+        sourcesQueried:   sources.length,
+        sourcesSucceeded: results.filter(function(r) { return r.status === "fulfilled"; }).length,
+        fetchedAt:        new Date().toISOString()
+      }
+    })
+  };
+};
+
+// ── Fetch and parse a single RSS feed ──────────────────────
+
+async function fetchRSS(source) {
   try {
-    const feed = await parser.parseURL(source.url);
-    const items = (feed.items || []).slice(0, 15); // Max 15 per source
-
-    return items
-      .filter((item) => isRelevant(item.title + " " + (item.contentSnippet || "")))
-      .map((item) => ({
-        title: cleanText(item.title || ""),
-        summary: cleanText(item.contentSnippet || item.content || ""),
-        url: item.link || "",
-        source: source.name,
-        category: source.category,
-        reliability: source.reliability,
-        publishedAt: item.pubDate ? new Date(item.pubDate).toISOString() : new Date().toISOString(),
-        sentiment: detectSentiment(item.title + " " + (item.contentSnippet || "")),
-      }));
-  } catch (error) {
-    console.warn(`Failed to fetch from ${source.name}:`, error.message);
-    return []; // Return empty array on failure — don't crash the whole function
+    var res = await fetch(source.url, {
+      headers: { "User-Agent": "REAMAL-Trade-NewsBot/1.0" },
+      signal: AbortSignal.timeout(6000)
+    });
+    if (!res.ok) return [];
+    var xml = await res.text();
+    return parseRSS(xml, source.name);
+  } catch(e) {
+    console.warn("Failed to fetch " + source.name + ":", e.message);
+    return [];
   }
 }
 
-// =============================================================
-// RELEVANCE FILTER
-// =============================================================
+// ── Simple RSS XML parser (no libraries needed) ─────────────
 
-function isRelevant(text) {
-  if (!text) return false;
-  const lowerText = text.toLowerCase();
-  return EURUSD_KEYWORDS.some((keyword) =>
-    lowerText.includes(keyword.toLowerCase())
-  );
-}
+function parseRSS(xml, sourceName) {
+  var items = [];
+  var itemMatches = xml.match(/<item[\s\S]*?<\/item>/gi) || [];
 
-// =============================================================
-// SENTIMENT DETECTOR
-// =============================================================
-
-function detectSentiment(text) {
-  if (!text) return "Neutral";
-  const lowerText = text.toLowerCase();
-
-  const bullishScore = BULLISH_EUR_KEYWORDS.filter((kw) =>
-    lowerText.includes(kw.toLowerCase())
-  ).length;
-
-  const bearishScore = BEARISH_EUR_KEYWORDS.filter((kw) =>
-    lowerText.includes(kw.toLowerCase())
-  ).length;
-
-  if (bullishScore > bearishScore) return "Bullish EUR";
-  if (bearishScore > bullishScore) return "Bearish EUR";
-  return "Neutral";
-}
-
-// =============================================================
-// OVERALL SENTIMENT SUMMARY
-// =============================================================
-
-function calculateOverallSentiment(articles) {
-  const counts = { "Bullish EUR": 0, "Bearish EUR": 0, Neutral: 0 };
-  articles.forEach((a) => {
-    counts[a.sentiment] = (counts[a.sentiment] || 0) + 1;
+  itemMatches.slice(0, 15).forEach(function(item) {
+    var title   = stripTags(getTag(item, "title"))   || "";
+    var link    = stripTags(getTag(item, "link"))    || "";
+    var desc    = stripTags(getTag(item, "description")) || "";
+    var pubDate = stripTags(getTag(item, "pubDate")) || new Date().toISOString();
+    if (!title) return;
+    items.push({
+      title:       cleanText(title),
+      summary:     cleanText(desc).slice(0, 200),
+      url:         link.trim(),
+      source:      sourceName,
+      publishedAt: safeDate(pubDate)
+    });
   });
-
-  const total = articles.length || 1;
-  const bullishPct = Math.round((counts["Bullish EUR"] / total) * 100);
-  const bearishPct = Math.round((counts["Bearish EUR"] / total) * 100);
-
-  let overall = "Neutral";
-  if (counts["Bullish EUR"] > counts["Bearish EUR"] + 2) overall = "Bullish EUR";
-  else if (counts["Bearish EUR"] > counts["Bullish EUR"] + 2) overall = "Bearish EUR";
-
-  return {
-    overall,
-    bullishPct,
-    bearishPct,
-    neutralPct: 100 - bullishPct - bearishPct,
-    counts,
-  };
+  return items;
 }
 
-// =============================================================
-// FORMAT NEWS FOR AI ANALYSIS PROMPT
-// =============================================================
-
-function formatForAI(articles, sentiment) {
-  if (!articles.length) return "No relevant EUR/USD news found at this time.";
-
-  const top = articles.slice(0, 8); // Send top 8 to AI
-  const lines = top.map(
-    (a, i) =>
-      `${i + 1}. [${a.source}] [${a.sentiment}] ${a.title}\n   ${a.summary ? a.summary.slice(0, 150) + "..." : "No summary."}`
-  );
-
-  return `OVERALL MARKET SENTIMENT: ${sentiment.overall} (${sentiment.bullishPct}% Bullish | ${sentiment.bearishPct}% Bearish)
-
-LATEST EUR/USD NEWS:
-${lines.join("\n\n")}`;
+function getTag(xml, tag) {
+  var m = xml.match(new RegExp("<" + tag + "[^>]*>([\\s\\S]*?)<\\/" + tag + ">", "i"));
+  if (m) return m[1];
+  // Try CDATA
+  var c = xml.match(new RegExp("<" + tag + "[^>]*>\\s*<!\\[CDATA\\[([\\s\\S]*?)\\]\\]>", "i"));
+  return c ? c[1] : "";
 }
 
-// =============================================================
-// CLEAN TEXT HELPER
-// =============================================================
+function stripTags(s) {
+  return (s || "").replace(/<[^>]*>/g, "");
+}
 
-function cleanText(text) {
-  return text
-    .replace(/<[^>]*>/g, "")       // Remove HTML tags
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
+function cleanText(s) {
+  return (s || "")
+    .replace(/&amp;/g,  "&")
+    .replace(/&lt;/g,   "<")
+    .replace(/&gt;/g,   ">")
     .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/\s+/g, " ")          // Collapse whitespace
+    .replace(/&#39;/g,  "'")
+    .replace(/&nbsp;/g, " ")
+    .replace(/\s+/g,    " ")
     .trim();
 }
 
-// =============================================================
-// DEDUPLICATE ARTICLES
-// =============================================================
-
-function deduplicate(articles) {
-  const seen = new Set();
-  return articles.filter((a) => {
-    const key = a.title.slice(0, 60).toLowerCase();
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
+function safeDate(dateStr) {
+  try { var d = new Date(dateStr); return isNaN(d) ? new Date().toISOString() : d.toISOString(); }
+  catch(e) { return new Date().toISOString(); }
 }
 
-// =============================================================
-// MAIN HANDLER
-// =============================================================
+function isRelevant(text, keywords) {
+  var low = (text || "").toLowerCase();
+  return keywords.some(function(k) { return low.indexOf(k) !== -1; });
+}
 
-export const handler = async (event) => {
-  // Handle CORS preflight
-  if (event.httpMethod === "OPTIONS") {
-    return { statusCode: 200, headers: corsHeaders(), body: "" };
-  }
+function getSentiment(text, bullish, bearish) {
+  var low = (text || "").toLowerCase();
+  var b = bullish.filter(function(k) { return low.indexOf(k) !== -1; }).length;
+  var r = bearish.filter(function(k) { return low.indexOf(k) !== -1; }).length;
+  if (b > r) return "Bullish EUR";
+  if (r > b) return "Bearish EUR";
+  return "Neutral";
+}
 
-  if (event.httpMethod !== "GET") {
-    return {
-      statusCode: 405,
-      headers: corsHeaders(),
-      body: JSON.stringify({ error: "Method not allowed. Use GET." }),
-    };
-  }
-
-  try {
-    // Fetch from all sources in parallel
-    const results = await Promise.allSettled(
-      NEWS_SOURCES.map((source) => fetchFromSource(source))
-    );
-
-    // Collect all successful results
-    let allArticles = results
-      .filter((r) => r.status === "fulfilled")
-      .flatMap((r) => r.value);
-
-    // Deduplicate and sort by newest first
-    allArticles = deduplicate(allArticles).sort(
-      (a, b) => new Date(b.publishedAt) - new Date(a.publishedAt)
-    );
-
-    // Calculate overall sentiment
-    const sentiment = calculateOverallSentiment(allArticles);
-
-    // Format for AI prompt
-    const aiContext = formatForAI(allArticles, sentiment);
-
-    // Count successful sources
-    const successfulSources = results.filter(
-      (r) => r.status === "fulfilled" && r.value.length > 0
-    ).length;
-
-    return {
-      statusCode: 200,
-      headers: corsHeaders(),
-      body: JSON.stringify({
-        success: true,
-        articles: allArticles.slice(0, 20), // Return top 20 for display
-        sentiment,
-        aiContext,                           // Pre-formatted for AI analysis
-        meta: {
-          total: allArticles.length,
-          sourcesQueried: NEWS_SOURCES.length,
-          sourcesSucceeded: successfulSources,
-          fetchedAt: new Date().toISOString(),
-        },
-      }),
-    };
-  } catch (error) {
-    console.error("News fetch error:", error);
-    return {
-      statusCode: 500,
-      headers: corsHeaders(),
-      body: JSON.stringify({
-        error: "Failed to fetch news. Analysis will proceed without live news.",
-        articles: [],
-        sentiment: { overall: "Unknown", bullishPct: 0, bearishPct: 0 },
-        aiContext: "News unavailable. Please base analysis on chart only.",
-      }),
-    };
-  }
-};
-
-// =============================================================
-// CORS HEADERS
-// =============================================================
-
-function corsHeaders() {
+function cors() {
   return {
-    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Origin":  "*",
     "Access-Control-Allow-Headers": "Content-Type",
     "Access-Control-Allow-Methods": "GET, OPTIONS",
-    "Content-Type": "application/json",
+    "Content-Type":                 "application/json"
   };
 }
