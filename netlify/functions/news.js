@@ -1,6 +1,7 @@
 // =============================================================
-// REAMAL Trade — Live News Function
-// Uses built-in fetch only — zero npm packages required
+// REAMAL Trade — Live News Function (v3)
+// Zero npm packages — built-in fetch + manual RSS parser
+// Uses diverse, reliable sources with fallback handling
 // =============================================================
 
 exports.handler = async function(event) {
@@ -9,167 +10,240 @@ exports.handler = async function(event) {
     return { statusCode: 200, headers: cors(), body: "" };
   }
 
-  // RSS feed sources — all free, no API keys needed
+  // Mix of RSS sources — different domains for reliability
   var sources = [
-    { name: "ForexLive",     url: "https://www.forexlive.com/feed/news" },
-    { name: "FXStreet",      url: "https://www.fxstreet.com/rss/news" },
-    { name: "Investing.com", url: "https://www.investing.com/rss/news_25.rss" },
-    { name: "DailyFX",       url: "https://www.dailyfx.com/feeds/all" }
+    { name: "ForexLive",       url: "https://www.forexlive.com/feed/news",                               timeout: 6000 },
+    { name: "Reuters",         url: "https://feeds.reuters.com/reuters/businessNews",                     timeout: 6000 },
+    { name: "MarketWatch",     url: "https://feeds.marketwatch.com/marketwatch/realtimeheadlines/",       timeout: 6000 },
+    { name: "CNBC",            url: "https://www.cnbc.com/id/10000664/device/rss/rss.html",               timeout: 6000 },
+    { name: "Nasdaq",          url: "https://www.nasdaq.com/feed/rssoutbound?category=Currencies",        timeout: 6000 },
+    { name: "Yahoo Finance",   url: "https://finance.yahoo.com/rss/topstories",                           timeout: 6000 },
+    { name: "Investing.com",   url: "https://www.investing.com/rss/news_25.rss",                          timeout: 6000 },
+    { name: "FXStreet",        url: "https://www.fxstreet.com/rss/news",                                  timeout: 6000 }
   ];
 
-  // Keywords to filter EUR/USD relevant news
-  var keywords = ["eur","usd","dollar","euro","ecb","fed","federal reserve",
-    "european central bank","interest rate","inflation","cpi","gdp","nfp",
-    "non-farm","unemployment","fomc","powell","lagarde","forex","eurusd",
-    "eur/usd","hawkish","dovish","rate hike","rate cut","monetary policy"];
+  var keywords = [
+    "eur","usd","dollar","euro","ecb","fed","federal reserve",
+    "european central bank","interest rate","inflation","cpi","gdp",
+    "non-farm","nfp","unemployment","fomc","powell","lagarde",
+    "forex","eurusd","eur/usd","hawkish","dovish","rate hike",
+    "rate cut","monetary policy","currency","fx market","forex market",
+    "treasury","bond yield","trade balance","retail sales","pmi","ism"
+  ];
 
-  var bullishWords = ["euro rises","euro gains","eur higher","dollar weakens",
-    "usd falls","dollar drops","fed dovish","rate cut expected","weaker dollar"];
-  var bearishWords = ["euro falls","euro drops","eur lower","dollar rises",
-    "usd gains","dollar strengthens","fed hawkish","rate hike expected","stronger dollar"];
+  var bullishWords = [
+    "euro rises","euro gains","euro rally","eur higher","eur/usd rises",
+    "dollar weakens","dollar drops","dollar falls","usd weaker",
+    "fed dovish","rate cut","weaker dollar","dollar selling"
+  ];
+  var bearishWords = [
+    "euro falls","euro drops","euro weakens","eur lower","eur/usd falls",
+    "dollar rises","dollar gains","dollar strengthens","usd stronger",
+    "fed hawkish","rate hike","stronger dollar","dollar buying"
+  ];
 
-  // Fetch all sources in parallel
+  // Fetch all sources in parallel — failures are silently skipped
   var results = await Promise.allSettled(
     sources.map(function(s) { return fetchRSS(s); })
   );
 
   var allArticles = [];
+  var successCount = 0;
   results.forEach(function(r) {
-    if (r.status === "fulfilled") allArticles = allArticles.concat(r.value);
+    if (r.status === "fulfilled" && r.value.length > 0) {
+      allArticles = allArticles.concat(r.value);
+      successCount++;
+    }
   });
 
-  // Filter relevant, deduplicate, sort newest first
+  // Filter to EUR/USD relevant only
+  var relevant = allArticles.filter(function(a) {
+    return isRelevant((a.title + " " + a.summary).toLowerCase(), keywords);
+  });
+
+  // If fewer than 3 relevant articles, relax filter and use all articles
+  if (relevant.length < 3) {
+    relevant = allArticles;
+  }
+
+  // Deduplicate by title similarity
   var seen = {};
-  var filtered = allArticles
-    .filter(function(a) { return isRelevant(a.title + " " + a.summary, keywords); })
-    .filter(function(a) {
-      var key = a.title.slice(0, 50).toLowerCase();
-      if (seen[key]) return false;
-      seen[key] = true;
-      return true;
-    })
-    .sort(function(a, b) { return new Date(b.publishedAt) - new Date(a.publishedAt); });
-
-  // Tag sentiment
-  filtered.forEach(function(a) {
-    a.sentiment = getSentiment(a.title + " " + a.summary, bullishWords, bearishWords);
+  var unique = relevant.filter(function(a) {
+    var key = a.title.slice(0, 55).toLowerCase().replace(/\s+/g, "");
+    if (seen[key]) return false;
+    seen[key] = true;
+    return true;
   });
 
-  // Overall sentiment
-  var bullCount = filtered.filter(function(a) { return a.sentiment === "Bullish EUR"; }).length;
-  var bearCount = filtered.filter(function(a) { return a.sentiment === "Bearish EUR"; }).length;
-  var total     = filtered.length || 1;
+  // Sort newest first
+  unique.sort(function(a, b) {
+    return new Date(b.publishedAt) - new Date(a.publishedAt);
+  });
+
+  // Tag sentiment on each article
+  unique.forEach(function(a) {
+    a.sentiment = getSentiment((a.title + " " + a.summary).toLowerCase(), bullishWords, bearishWords);
+  });
+
+  // Calculate overall sentiment
+  var total     = unique.length || 1;
+  var bullCount = unique.filter(function(a) { return a.sentiment === "Bullish EUR"; }).length;
+  var bearCount = unique.filter(function(a) { return a.sentiment === "Bearish EUR"; }).length;
   var bullPct   = Math.round((bullCount / total) * 100);
   var bearPct   = Math.round((bearCount / total) * 100);
-  var overall   = bullCount > bearCount + 2 ? "Bullish EUR" : bearCount > bullCount + 2 ? "Bearish EUR" : "Neutral";
+  var overall   = "Neutral";
+  if (bullCount > bearCount + 1) overall = "Bullish EUR";
+  if (bearCount > bullCount + 1) overall = "Bearish EUR";
 
-  var sentiment = { overall: overall, bullishPct: bullPct, bearishPct: bearPct, neutralPct: 100 - bullPct - bearPct };
+  var sentiment = {
+    overall:    overall,
+    bullishPct: bullPct,
+    bearishPct: bearPct,
+    neutralPct: Math.max(0, 100 - bullPct - bearPct)
+  };
 
-  // Format for AI
-  var top = filtered.slice(0, 8);
-  var aiContext = "OVERALL SENTIMENT: " + overall + " (" + bullPct + "% Bullish | " + bearPct + "% Bearish)\n\n"
-    + "LATEST EUR/USD NEWS:\n"
-    + top.map(function(a, i) {
-        return (i+1) + ". [" + a.source + "] [" + a.sentiment + "] " + a.title
-          + (a.summary ? "\n   " + a.summary.slice(0, 120) + "..." : "");
-      }).join("\n\n");
+  // Format top 8 for AI context
+  var top8 = unique.slice(0, 8);
+  var aiContext = top8.length > 0
+    ? "OVERALL MARKET SENTIMENT: " + overall + " (" + bullPct + "% Bullish | " + bearPct + "% Bearish)\n\n"
+      + "LATEST MARKET NEWS:\n"
+      + top8.map(function(a, i) {
+          return (i + 1) + ". [" + a.source + "] [" + a.sentiment + "] " + a.title
+            + (a.summary ? "\n   " + a.summary.slice(0, 150) + "..." : "");
+        }).join("\n\n")
+    : "No relevant news available at this time. Base analysis on chart only.";
 
   return {
     statusCode: 200,
     headers: cors(),
     body: JSON.stringify({
       success:   true,
-      articles:  filtered.slice(0, 20),
+      articles:  unique.slice(0, 20),
       sentiment: sentiment,
       aiContext: aiContext,
       meta: {
-        total:            filtered.length,
+        total:            unique.length,
         sourcesQueried:   sources.length,
-        sourcesSucceeded: results.filter(function(r) { return r.status === "fulfilled"; }).length,
+        sourcesSucceeded: successCount,
         fetchedAt:        new Date().toISOString()
       }
     })
   };
 };
 
-// ── Fetch and parse a single RSS feed ──────────────────────
+// ── Fetch one RSS source ────────────────────────────────────
 
 async function fetchRSS(source) {
   try {
+    var controller = new AbortController();
+    var timer = setTimeout(function() { controller.abort(); }, source.timeout || 6000);
+
     var res = await fetch(source.url, {
-      headers: { "User-Agent": "REAMAL-Trade-NewsBot/1.0" },
-      signal: AbortSignal.timeout(6000)
+      signal: controller.signal,
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; REAMAL-Trade-Bot/1.0; +https://reamal-trade.netlify.app)",
+        "Accept":     "application/rss+xml, application/xml, text/xml, */*"
+      }
     });
+
+    clearTimeout(timer);
     if (!res.ok) return [];
-    var xml = await res.text();
-    return parseRSS(xml, source.name);
+
+    var text = await res.text();
+    return parseRSS(text, source.name);
+
   } catch(e) {
-    console.warn("Failed to fetch " + source.name + ":", e.message);
+    console.log("Skipped " + source.name + ": " + e.message);
     return [];
   }
 }
 
-// ── Simple RSS XML parser (no libraries needed) ─────────────
+// ── RSS/Atom XML parser (no libraries) ─────────────────────
 
 function parseRSS(xml, sourceName) {
   var items = [];
-  var itemMatches = xml.match(/<item[\s\S]*?<\/item>/gi) || [];
 
-  itemMatches.slice(0, 15).forEach(function(item) {
-    var title   = stripTags(getTag(item, "title"))   || "";
-    var link    = stripTags(getTag(item, "link"))    || "";
-    var desc    = stripTags(getTag(item, "description")) || "";
-    var pubDate = stripTags(getTag(item, "pubDate")) || new Date().toISOString();
-    if (!title) return;
+  // Try RSS <item> tags first, then Atom <entry> tags
+  var itemRegex   = /<item[\s\S]*?<\/item>/gi;
+  var entryRegex  = /<entry[\s\S]*?<\/entry>/gi;
+  var matches     = xml.match(itemRegex) || xml.match(entryRegex) || [];
+
+  matches.slice(0, 12).forEach(function(block) {
+    var title   = getText(block, "title");
+    var link    = getLink(block);
+    var desc    = getText(block, "description") || getText(block, "summary") || getText(block, "content");
+    var pubDate = getText(block, "pubDate") || getText(block, "published") || getText(block, "updated") || "";
+
+    title = clean(title);
+    if (!title || title.length < 5) return;
+
     items.push({
-      title:       cleanText(title),
-      summary:     cleanText(desc).slice(0, 200),
-      url:         link.trim(),
+      title:       title,
+      summary:     clean(desc).slice(0, 250),
+      url:         link || "",
       source:      sourceName,
       publishedAt: safeDate(pubDate)
     });
   });
+
   return items;
 }
 
-function getTag(xml, tag) {
-  var m = xml.match(new RegExp("<" + tag + "[^>]*>([\\s\\S]*?)<\\/" + tag + ">", "i"));
-  if (m) return m[1];
-  // Try CDATA
-  var c = xml.match(new RegExp("<" + tag + "[^>]*>\\s*<!\\[CDATA\\[([\\s\\S]*?)\\]\\]>", "i"));
-  return c ? c[1] : "";
+// ── XML helpers ─────────────────────────────────────────────
+
+function getText(block, tag) {
+  // Try CDATA first
+  var cd = block.match(new RegExp("<" + tag + "[^>]*>\\s*<!\\[CDATA\\[([\\s\\S]*?)\\]\\]>\\s*<\\/" + tag + ">", "i"));
+  if (cd) return cd[1];
+  // Then plain content
+  var pl = block.match(new RegExp("<" + tag + "[^>]*>([\\s\\S]*?)<\\/" + tag + ">", "i"));
+  if (pl) return pl[1];
+  return "";
 }
 
-function stripTags(s) {
-  return (s || "").replace(/<[^>]*>/g, "");
+function getLink(block) {
+  // <link>url</link>
+  var m = block.match(/<link>([^<]+)<\/link>/i);
+  if (m) return m[1].trim();
+  // <link href="url" />
+  var h = block.match(/<link[^>]+href=["']([^"']+)["']/i);
+  if (h) return h[1].trim();
+  // Plain URL in link tag
+  var u = block.match(/<link[^>]*>\s*(https?:\/\/[^\s<]+)/i);
+  if (u) return u[1].trim();
+  return "";
 }
 
-function cleanText(s) {
+function clean(s) {
   return (s || "")
-    .replace(/&amp;/g,  "&")
-    .replace(/&lt;/g,   "<")
-    .replace(/&gt;/g,   ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g,  "'")
-    .replace(/&nbsp;/g, " ")
-    .replace(/\s+/g,    " ")
+    .replace(/<!\[CDATA\[|\]\]>/g, "")
+    .replace(/<[^>]*>/g,           " ")
+    .replace(/&amp;/g,   "&")
+    .replace(/&lt;/g,    "<")
+    .replace(/&gt;/g,    ">")
+    .replace(/&quot;/g,  '"')
+    .replace(/&#39;/g,   "'")
+    .replace(/&nbsp;/g,  " ")
+    .replace(/&#\d+;/g,  "")
+    .replace(/\s+/g,     " ")
     .trim();
 }
 
-function safeDate(dateStr) {
-  try { var d = new Date(dateStr); return isNaN(d) ? new Date().toISOString() : d.toISOString(); }
+function safeDate(s) {
+  if (!s) return new Date().toISOString();
+  try { var d = new Date(s.trim()); return isNaN(d) ? new Date().toISOString() : d.toISOString(); }
   catch(e) { return new Date().toISOString(); }
 }
 
+// ── Relevance & Sentiment ───────────────────────────────────
+
 function isRelevant(text, keywords) {
-  var low = (text || "").toLowerCase();
-  return keywords.some(function(k) { return low.indexOf(k) !== -1; });
+  return keywords.some(function(k) { return text.indexOf(k) !== -1; });
 }
 
 function getSentiment(text, bullish, bearish) {
-  var low = (text || "").toLowerCase();
-  var b = bullish.filter(function(k) { return low.indexOf(k) !== -1; }).length;
-  var r = bearish.filter(function(k) { return low.indexOf(k) !== -1; }).length;
+  var b = bullish.filter(function(k) { return text.indexOf(k) !== -1; }).length;
+  var r = bearish.filter(function(k) { return text.indexOf(k) !== -1; }).length;
   if (b > r) return "Bullish EUR";
   if (r > b) return "Bearish EUR";
   return "Neutral";
